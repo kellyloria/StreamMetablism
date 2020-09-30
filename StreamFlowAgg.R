@@ -15,8 +15,10 @@
 
 library(dataRetrieval)
 library(ggplot2)
+library(scales)
 library(tidyverse)
 library(zoo)
+
 
 ## ---------------------------
 # Water Quality Portal
@@ -26,13 +28,15 @@ library(zoo)
 # Sagehen
 siteNumber <- "10343500" 
 SagehenInfo <- readNWISsite(siteNumber)
-parameterCd <- "00060" # Discharge
+parameterCd <- c("00060", #discharge 
+                 "00010")  # Wtemp
+                 #"62854")  # Organic nitrogen, water
 
 #Raw daily data:
 qwData_Sagehen <- readNWISdv(siteNumber,parameterCd,
                            "1980-01-01","2020-01-01")
 
-plot(qwData_Sagehen$Date, qwData_Sagehen$X_00060_00003)
+plot(qwData_Sagehen$Date, qwData_Sagehen$X_00060_00003_cd)
 qwData_Sagehen$site <- "Sagehen"
 
 
@@ -41,18 +45,18 @@ qwData_Sagehen$site <- "Sagehen"
 # Ward creek "10336676" 
 siteNumber <- "10336676" 
 SagehenInfo <- readNWISsite(siteNumber)
-parameterCd <- "00060" # Discharge
+parameterCd <- c("00060", "00010")
 #Raw daily data:
 qwData_ward <- readNWISdv(siteNumber,parameterCd,
                      "1980-01-01","2020-01-01")
-plot(qwData_ward$Date, qwData_ward$X_00060_00003)
+plot(qwData_ward$Date, qwData_ward$X_00010_00003)
 qwData_ward$site <- "Ward"
 
 
 # Blackwood canyon "10336660"
 siteNumber <- "10336660" 
 SagehenInfo <- readNWISsite(siteNumber)
-parameterCd <- "00060" # Discharge
+parameterCd <- c("00060", "00010")
 
 #Raw daily data:
 qwData_BlackW <- readNWISdv(siteNumber,parameterCd,
@@ -60,13 +64,39 @@ qwData_BlackW <- readNWISdv(siteNumber,parameterCd,
 plot(qwData_BlackW$Date, qwData_BlackW$X_00060_00003)
 qwData_BlackW$site <- "Blackwood"
 
-AllFlow <- rbind(qwData_Sagehen, qwData_ward, qwData_BlackW)
+#10336645
+# General "10336645"
+siteNumber <- "10336645" 
+SagehenInfo <- readNWISsite(siteNumber)
+parameterCd <- c("00060", "00010")
+
+#Raw daily data:
+qwData_Gen <- readNWISdv(siteNumber,parameterCd,
+                            "1980-01-01","2020-01-01")
+plot(qwData_Gen$Date, qwData_Gen$X_00060_00003)
+qwData_Gen$site <- "General"
+
+
+AllFlow <- rbind(qwData_Sagehen, qwData_ward, qwData_BlackW, qwData_Gen)
 
 p <- ggplot(AllFlow, aes(x=Date, y=(X_00060_00003), colour =as.factor(site))) +
-  geom_line()  +
+  geom_line()  + ylab("Discharge") +
   theme_classic() + facet_wrap(~site)
 
 
+p2 <- ggplot(AllFlow, aes(x=Date, y=(X_00010_00003), colour =as.factor(site))) +
+  geom_line()  + ylab("Water TempC") + 
+  scale_x_date(date_breaks = "6 month", 
+               labels=date_format("%b-%Y"),
+               limits = as.Date(c('2016-01-01','2020-01-01'))) +
+  theme_classic() + facet_wrap(~site)
+
+
+# East side?
+# Nutrient species?
+# Span of snow data?
+
+## ---------------------------
 # Average by month
 library(tidyverse)
 library(zoo)
