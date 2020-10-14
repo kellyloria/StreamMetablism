@@ -96,6 +96,8 @@ p2 <- ggplot(AllFlow, aes(x=Date, y=(X_00010_00003), colour =as.factor(site))) +
 # Nutrient species?
 # Span of snow data?
 
+# Lets get some precipitation data:
+
 ## ---------------------------
 # Average by month
 library(tidyverse)
