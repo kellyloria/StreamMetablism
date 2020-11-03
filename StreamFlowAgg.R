@@ -38,7 +38,7 @@ qwData_Sagehen <- readNWISdv(siteNumber,parameterCd,
 
 plot(qwData_Sagehen$Date, qwData_Sagehen$X_00060_00003_cd)
 qwData_Sagehen$site <- "Sagehen"
-
+summary(qwData_Sagehen)
 
 #pCode <- readNWISpCode(parameterCd)
 
