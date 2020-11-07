@@ -45,6 +45,27 @@ WardSNOTEL$Elevation.ft <- c(6745)
 WardSNOTEL$Lat <- c(39.133)
 WardSNOTEL$Long <- c(-120.217)
 
+WardSNOTEL_ex <- read.delim(paste0(inputDir, "/WardSNOTEL_v2dat.TXT"), header=T, sep = ',')
+summary(WardSNOTEL_ex)
+# attempting to convert dt1$date dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d"
+tmp1date<-as.Date(WardSNOTEL_ex$Date,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1date) == length(tmp1date[!is.na(tmp1date)])){WardSNOTEL_ex$Date <- tmp1date } else {print("Date conversion failed for dt1$date. Please inspect the data and do the date conversion yourself.")}                                                                    
+rm(tmpDateFormat,tmp1date) 
+summary(WardSNOTEL_ex)
+names(WardSNOTEL_ex)[2] <- "PrecipAccum.aveR" 
+names(WardSNOTEL_ex)[3] <- "PrecipIncrement"
+names(WardSNOTEL_ex)[4] <- "PrecipIncrement.snowadj"
+names(WardSNOTEL_ex)[5] <- "SnowRainRatio"
+
+# Left join the 2 data frames together:
+WardSNOTEL_v2 <- left_join(WardSNOTEL, WardSNOTEL_ex[c("Date", "PrecipAccum.aveR", "PrecipIncrement", "PrecipIncrement.snowadj",
+                                                          "SnowRainRatio")],
+                            by = c("Date" = "Date"))
+summary(WardSNOTEL_v2)
+
+
 qplot(Date, PrecipAccum.ave, data = WardSNOTEL.Q, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
@@ -54,9 +75,8 @@ qplot(Date, SWEin, data = WardSNOTEL.Q, geom="line") +
 qplot(Date, SnowDepth, data = WardSNOTEL.Q, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
-WardSNOTEL.Q <- subset(WardSNOTEL, Date >= ('2000-10-01') & 
+WardSNOTEL.Q <- subset(WardSNOTEL_v2, Date >= ('1999-10-01') & 
                          Date <= ('2020-10-01'))
-summary(WardSNOTEL.Q)
 
 
 ## ---------------------------
@@ -84,8 +104,27 @@ RubiconSNOTEL$Elevation.ft <- c(7619)
 RubiconSNOTEL$Lat <- c(	39.00)
 RubiconSNOTEL$Long <- c(-120.13)
 
+RubiconSNOTEL_ex <- read.delim(paste0(inputDir, "/RubiconSNOTEL_v2dat.TXT"), header=T, sep = ',')
+summary(RubiconSNOTEL_ex)
+# attempting to convert dt1$date dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d"
+tmp1date<-as.Date(RubiconSNOTEL_ex$Date,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1date) == length(tmp1date[!is.na(tmp1date)])){RubiconSNOTEL_ex$Date <- tmp1date } else {print("Date conversion failed for dt1$date. Please inspect the data and do the date conversion yourself.")}                                                                    
+rm(tmpDateFormat,tmp1date) 
+summary(RubiconSNOTEL_ex)
+names(RubiconSNOTEL_ex)[2] <- "PrecipAccum.aveR" 
+names(RubiconSNOTEL_ex)[3] <- "PrecipIncrement"
+names(RubiconSNOTEL_ex)[4] <- "PrecipIncrement.snowadj"
+names(RubiconSNOTEL_ex)[5] <- "SnowRainRatio"
 
-qplot(Date, PrecipAccum.ave, data = RubiconSNOTEL.Q, geom="line") +
+# Left join the 2 data frames together:
+RubiconSNOTEL_v2 <- left_join(RubiconSNOTEL, RubiconSNOTEL_ex[c("Date", "PrecipAccum.aveR", "PrecipIncrement", "PrecipIncrement.snowadj",
+                                                          "SnowRainRatio")],
+                         by = c("Date" = "Date"))
+summary(RubiconSNOTEL_v2)
+
+qplot(Date, PrecipAccum.aveR, data = RubiconSNOTEL_v2, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
 qplot(Date, SWEin, data = RubiconSNOTEL.Q, geom="line") +
@@ -97,7 +136,7 @@ qplot(Date, SnowDepth, data = RubiconSNOTEL.Q, geom="line") +
 qplot(Date, AirTempF.ave, data = RubiconSNOTEL.Q, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
-RubiconSNOTEL.Q <- subset(RubiconSNOTEL, Date >= ('2000-10-01') & 
+RubiconSNOTEL.Q <- subset(RubiconSNOTEL_v2, Date >= ('1999-10-01') & 
                          Date <= ('2020-10-01'))
 
 
@@ -127,10 +166,30 @@ Indi2SNOTEL$Elevation.ft <- c(6980)
 Indi2SNOTEL$Lat <- c(39.450)
 Indi2SNOTEL$Long <- c(-120.300)
 
-qplot(Date, PrecipAccum.ave, data = Indi2SNOTEL.Q, geom="line") +
+Indi2SNOTEL_ex <- read.delim(paste0(inputDir, "/IndependenceSNOTEL_v2dat.TXT"), header=T, sep = ',')
+summary(Indi2SNOTEL_ex)
+# attempting to convert dt1$date dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d"
+tmp1date<-as.Date(Indi2SNOTEL_ex$Date,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1date) == length(tmp1date[!is.na(tmp1date)])){Indi2SNOTEL_ex$Date <- tmp1date } else {print("Date conversion failed for dt1$date. Please inspect the data and do the date conversion yourself.")}                                                                    
+rm(tmpDateFormat,tmp1date) 
+summary(RubiconSNOTEL_ex)
+names(Indi2SNOTEL_ex)[2] <- "PrecipAccum.aveR" 
+names(Indi2SNOTEL_ex)[3] <- "PrecipIncrement"
+names(Indi2SNOTEL_ex)[4] <- "PrecipIncrement.snowadj"
+names(Indi2SNOTEL_ex)[5] <- "SnowRainRatio"
+
+# Left join the 2 data frames together:
+Indi2SNOTEL_v2 <- left_join(Indi2SNOTEL, Indi2SNOTEL_ex[c("Date", "PrecipAccum.aveR", "PrecipIncrement", "PrecipIncrement.snowadj",
+                                                                "SnowRainRatio")],
+                              by = c("Date" = "Date"))
+summary(Indi2SNOTEL_v2)
+
+qplot(Date, PrecipAccum.aveR, data = Indi2SNOTEL_v2, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
-qplot(Date, SWEin, data = Indi2SNOTEL.Q, geom="line") +
+qplot(Date, PrecipIncrement, data = Indi2SNOTEL_v2, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
 qplot(Date, SnowDepth, data = Indi2SNOTEL.Q, geom="line") +
@@ -139,7 +198,7 @@ qplot(Date, SnowDepth, data = Indi2SNOTEL.Q, geom="line") +
 qplot(Date, AirTempF.ave, data = Indi2SNOTEL.Q, geom="line") +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
-Indi2SNOTEL.Q <- subset(Indi2SNOTEL, Date >= ('2000-10-01') & 
+Indi2SNOTEL.Q <- subset(Indi2SNOTEL_v2, Date >= ('1999-10-01') & 
                          Date <= ('2020-10-01'))
 summary(Indi2SNOTEL.Q)
 
