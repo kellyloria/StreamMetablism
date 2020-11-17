@@ -19,9 +19,10 @@ library(lme4)
 library(lmerTest)
 library(MuMIn)
 library(PerformanceAnalytics) 
+se <- function(x) sd(x) / sqrt(length(x))
 ## ---------------------------
 # I. Read in data: df
-df <- read.csv(paste0(inputDir, "/NRES710_MSM_dat.csv"), header=T, sep = ',')
+df <- read.csv(paste0(inputDir, "/NRES710_MSM_Wdat.csv"), header=T, sep = ',')
 # Make sure date is formatted correctly: 
 tmpDateFormat<-"%Y-%m-%d"
 tmp1date<-as.Date(df$Date,format=tmpDateFormat)
@@ -306,11 +307,32 @@ summary(SOSmax.fullmod) # sig
 hist(residuals(SOSmax.fullmod)) # pretty normally distributed and best fit model
 r.squaredGLMM(SOSmax.fullmod) 
 
-#df_winter <- (subset(df, nmonth > 12 | nmonth < 5)) 
-#summary(df_winter)
+## ---------------------------
+# IIc. Statistical tests: R-O-S events
+df_winter <- (subset(df, nmonth > 11 | nmonth < 5)) 
+summary(df_winter)
 
 # probably dealing with zero inflation lets buff up to winter week maximums. 
 ROSmax.fullmod <- lmer(discharge ~ scale(ROS_0NY)+ (1|GaugeSite), data = df_winter)
+summary(ROSmax.fullmod) 
+hist(residuals(ROSmax.fullmod)) # pretty normally distributed and best fit model
+r.squaredGLMM(ROSmax.fullmod) 
+range(na.omit(df_winter$ROS_0NY))
+
+ROSmax.fullmod <- lmer(discharge ~ scale(ROS2_YN)+ (1|GaugeSite), data = df_winter)
+summary(ROSmax.fullmod) 
+hist(residuals(ROSmax.fullmod)) # pretty normally distributed and best fit model
+r.squaredGLMM(ROSmax.fullmod) 
+range(na.omit(df_winter$ROS_0NY))
+
+ROSmax.fullmod <- lmer(discharge ~ scale(ROS3_YN)+ (1|GaugeSite), data = df_winter)
+summary(ROSmax.fullmod) 
+hist(residuals(ROSmax.fullmod)) # pretty normally distributed and best fit model
+r.squaredGLMM(ROSmax.fullmod) 
+range(na.omit(df_winter$ROS_0NY))
+
+
+ROSmax.fullmod <- lmer(discharge ~ scale(ROS_temp1)+ (1|GaugeSite), data = df_winter)
 summary(ROSmax.fullmod) 
 hist(residuals(ROSmax.fullmod)) # pretty normally distributed and best fit model
 r.squaredGLMM(ROSmax.fullmod) 
@@ -354,7 +376,7 @@ r.squaredGLMM(ROSmax.fullmod)
 
 ## ---------------------------
 # IIc. Statistical tests: R-O-S events
-summary(d)
+summary(df)
 
 # Maybe think about this as occupancy 
 # lets start by sub setting for winter months only 
