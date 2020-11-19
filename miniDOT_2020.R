@@ -93,8 +93,33 @@ range(Sept_CalQ$timestamp)
 qplot(timestamp, Dissolved.Oxygen.Saturation, data = Blackwood_prelimQ, geom="line", ylab = "Sat", color = factor(Site)) +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
-# write.csv(Blackwood_prelimQ, (paste0(outputDir,"/Blackwood_2020prelimQ.csv"))) # complied data file of all RBR sensors along buoy line
+# Add in new download: 2020-10-29
+Blackwood_prelim2 <- read.delim(paste0(inputDir, "/Blackwood_7450-617000/20201029/7450-617000/BWCatCopy.txt"), header=T, sep = ',')
+summary(Blackwood_prelim2)
+Blackwood_prelim2$Site <- "Blackwood"
+Blackwood_prelim2$Seiral <- "617000"
 
+# attempting to convert dt1$timestamp dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d %H:%M:%S" 
+tmp1timestamp<-as.POSIXct(Blackwood_prelim2$Pacific.Standard.Time,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1timestamp) == length(tmp1timestamp[!is.na(tmp1timestamp)])){Blackwood_prelim2$timestamp <- tmp1timestamp } else {print("Date conversion failed for dt1$timestamp. Please inspect the data and do the date conversion yourself.")}    
+
+Blackwood_prelim2Q <- subset(Blackwood_prelim2,timestamp >= as.POSIXct('2020-10-11 11:30:00') & 
+                              timestamp <= as.POSIXct('2020-10-29 12:00:00'))
+range(Blackwood_prelim2Q$timestamp)
+
+Blackwood_prelim3Q <- rbind(Blackwood_prelimQ, Blackwood_prelim2Q)
+
+plot_grid(
+  ggplot(Blackwood_prelim3Q, aes(timestamp, Dissolved.Oxygen)) + geom_point(),
+  ggplot(Blackwood_prelim3Q, aes(timestamp, Temperature)) + geom_point(),
+  ggplot(Blackwood_prelim3Q, aes(timestamp, Q)) + geom_point(),
+  ncol=1, align="hv")
+
+# write.csv(Blackwood_prelim3Q, (paste0(outputDir,"/Blackwood_2020prelimQ.csv"))) # complied data file
+
+## ---------------------------
 # General:
 General_prelim <- read.delim(paste0(inputDir, "/General_7450-547404/Cat_copy.TXT"), header=T, sep = ',')
 summary(General_prelim)
@@ -114,8 +139,34 @@ range(General_prelimQ$timestamp)
 qplot(timestamp, Dissolved.Oxygen.Saturation, data = General_prelimQ, geom="line", ylab = "Sat", color = factor(Site)) +
   theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
 
-# write.csv(General_prelimQ, (paste0(outputDir,"/General_prelimQ.csv"))) # complied data file of all RBR sensors along buoy line
 
+# Add in new download: 2020-10-29
+General_prelim2 <- read.delim(paste0(inputDir, "/General_7450-547404/20201029/7450-547404/GCCatCopy.txt"), header=T, sep = ',')
+summary(General_prelim2)
+General_prelim2$Site <- "General"
+General_prelim2$Seiral <- "547404"
+
+# attempting to convert dt1$timestamp dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d %H:%M:%S" 
+tmp1timestamp<-as.POSIXct(General_prelim2$Pacific.Standard.Time,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1timestamp) == length(tmp1timestamp[!is.na(tmp1timestamp)])){General_prelim2$timestamp <- tmp1timestamp } else {print("Date conversion failed for dt1$timestamp. Please inspect the data and do the date conversion yourself.")}    
+
+General_prelim2Q <- subset(General_prelim2,timestamp >= as.POSIXct('2020-10-10 11:00:00') & 
+                            timestamp <= as.POSIXct('2020-10-29 11:30:00'))
+range(General_prelim2Q$timestamp)
+
+General_prelim3Q <- rbind(General_prelimQ, General_prelim2Q)
+
+plot_grid(
+  ggplot(General_prelim3Q, aes(timestamp, Dissolved.Oxygen)) + geom_point(),
+  ggplot(General_prelim3Q, aes(timestamp, Temperature)) + geom_point(),
+  ggplot(General_prelim3Q, aes(timestamp, Q)) + geom_point(),
+  ncol=1, align="hv")
+
+# write.csv(General_prelim3Q, (paste0(outputDir,"/General_prelimQ.csv"))) # complied data file 
+
+## ---------------------------
 # Ward:
 Ward_prelim <- read.delim(paste0(inputDir, "/Ward_7450-555348/Cat_copy.TXT"), header=T, sep = ',')
 summary(Ward_prelim)
@@ -153,7 +204,71 @@ qplot(timestamp, Dissolved.Oxygen.Saturation, data = Ward_prelim0Q, geom="line",
 Ward_prelimQ2 <- rbind(Ward_prelim0Q, Ward_prelimQ)
 summary(Ward_prelimQ2)
 
-# write.csv(Ward_prelimQ2, (paste0(outputDir,"/Ward_prelimQ.csv")))
+# Add in new download: 2020-10-29
+Ward_prelim2 <- read.delim(paste0(inputDir, "/Ward_7450-555348/20201029/7450-555348/WCCatCopy.txt"), header=T, sep = ',')
+summary(Ward_prelim2)
+Ward_prelim2$Site <- "Ward"
+Ward_prelim2$Seiral <- "555348"
+
+# attempting to convert dt1$timestamp dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d %H:%M:%S" 
+tmp1timestamp<-as.POSIXct(Ward_prelim2$Pacific.Standard.Time,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1timestamp) == length(tmp1timestamp[!is.na(tmp1timestamp)])){Ward_prelim2$timestamp <- tmp1timestamp } else {print("Date conversion failed for dt1$timestamp. Please inspect the data and do the date conversion yourself.")}  
+
+Ward_prelim2_Q <- subset(Ward_prelim2,timestamp >= as.POSIXct('2020-10-10 12:00:00') & 
+                          timestamp < as.POSIXct('2020-10-29 13:00:00'))
+range(Ward_prelim2_Q$timestamp)
+
+
+Ward_prelim3Q <- rbind(Ward_prelimQ2, Ward_prelim2_Q)
+
+plot_grid(
+  ggplot(Ward_prelim3Q, aes(timestamp, Dissolved.Oxygen)) + geom_point(),
+  ggplot(Ward_prelim3Q, aes(timestamp, Temperature)) + geom_point(),
+  ggplot(Ward_prelim3Q, aes(timestamp, Q)) + geom_point(),
+  ncol=1, align="hv")
+
+
+# write.csv(Ward_prelim3Q, (paste0(outputDir,"/Ward_prelimQ.csv")))
+
+## ---------------------------
+# Franktown
+
+setwd("~/Documents/UNR_2020/Fall2020Projects/miniDOT_2020PrelimDat/Franktown_7450-666671/2020_10_05miniDOT_JB")
+getwd()
+# Set wd to proper place using "Files"
+raw <- ldply(list.files(pattern = "txt"), function(filename) {
+  dum = read.table(filename, sep = ",", skip=3, header=F)
+  return(dum)
+})
+
+colnames(raw) <- c("Time","V","Temp","DO","Q")
+raw$Time <- as.POSIXct(raw$Time, origin="1970-01-01")
+head(raw, lines=5)
+
+sapply(raw, class)
+
+## Select desired datetime range
+range(raw$Time)
+raw1 <- subset(raw, Time > "2020-09-23 17:00:00" & Time < "2020-10-05 14:00:00")
+raw2 <- subset(raw, Time > "2020-10-05 15:30:00" & Time < "2020-10-15 12:00:00")
+
+Franktown3Q <- rbind(raw1, raw2)
+
+
+## Visualize
+plot_grid(
+  ggplot(Franktown3Q, aes(Time, DO)) + geom_point(),
+  ggplot(Franktown3Q, aes(Time, Temp)) + geom_point(),
+  ggplot(Franktown3Q, aes(Time, Q)) + geom_point(),
+  ncol=1, align="hv")
+
+Franktown3Q$Site <- "Franktown"
+Franktown3Q$Seiral <- "66671"
+
+#write.csv(Franktown3Q, (paste0(outputDir,"/Franktown_prelimQ.csv")))
+
 
 ## ---------------------------
 # Check out patterns by site

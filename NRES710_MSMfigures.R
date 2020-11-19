@@ -52,8 +52,8 @@ range(fig5.df$BM.HSHO)
 #     # name = 'Stream discharge ('~ft^3~s^-1*')'
 #     
 
-Fig_SWEFlow <- ggplot(dmax, aes(x=SWE.max.yr, y=discharge.max.yr, color=GaugeSite)) +
-  geom_point(aes(x=SWE.max.yr, y=discharge.max.yr, color=GaugeSite),shape =1, size =2) +
+Fig_SWEFlow <- ggplot(df_MaxA, aes(x=SWEin, y=discharge, color=GaugeSite)) +
+  geom_point(aes(x=SWEin, y=discharge, color=GaugeSite),shape =1, size =2) +
   stat_smooth(method="lm", se=F, colour="gray") +
   scale_x_continuous(limits = c(0, 70), breaks=seq(0,70,20)) +
   scale_y_continuous(limits = c(0, 420), breaks=seq(0, 400, 100)) +
