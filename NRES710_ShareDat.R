@@ -273,5 +273,15 @@ Fig_SWEFlow <- ggplot(df, aes(x=ROS3_YN, y=discharge, color=GaugeSite)) +
   facet_wrap(~GaugeSite)
 
 # so it looks like rain on snow is just a binary level and so not sure how best to analyze 
+# for those areas that experienced a rain on snow event and compare the dishcharge before and after. 
+
+inds = which(df$ROS2_YN == 1)
+# We use lapply() to get all rows for all indices, result is a list
+rows <- lapply(inds, function(x) (x-5):(x+5))
+# With unlist() you get all relevant rows
+df_ROS <- df[unlist(rows),]
+
+# write.csv(df_ROS, paste0(outputDir, "df_ROS.csv")) 
+
 
 
