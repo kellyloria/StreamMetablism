@@ -64,9 +64,9 @@ summary(df)
 df_ave <- df %>%
   # Create grouping variable for water year "week-year"
   mutate(
-    w_wkyr= paste(df$week, df$w_wkyr)) %>%
+    w_wkyr= paste(df$week, df$wtr_yr)) %>%
   # Average all data averaged by week-year
-  group_by(GaugeSite, w_wkyr, wtr_yr, nmonth, Relief_T, Contrib_Drainage_Area) %>%
+  group_by(GaugeSite, w_wkyr, wtr_yr, nmonth) %>%
   summarise("WtempC.ave" = mean(WtempC, na.rm = TRUE), 
             "discharge.ave"= mean(discharge, na.rm = TRUE),
             "PrecipAccum.ave"= mean(PrecipAccum.aveR, na.rm = TRUE),
@@ -137,7 +137,7 @@ summary(dmax)
 # Model building: Full model that isn't over correlated
 Flowmax.Fullmod <- lmer(discharge.max.yr ~ scale(SWE.max.yr) + 
                                scale(Contrib_Drainage_Area) + scale(Relief_T) + scale(AirTempCMax.max.yr) +
-                               scale(wtr_yr) + (1|GaugeSite), data = dmax) 
+                               scale(wtr_yr) + LikelyROS_max + (1|GaugeSite), data = dmax) 
 summary(Flowmax.Fullmod) # sig  
 hist(residuals(Flowmax.Fullmod)) # pretty normally distributed and best fit model 
 r.squaredGLMM(Flowmax.Fullmod) # r2c = 0.767

@@ -272,9 +272,57 @@ Franktown3Q$Seiral <- "66671"
 
 ## ---------------------------
 # Check out patterns by site
-prelimDO_2020 <- rbind(Ward_prelimQ2, General_prelimQ, Blackwood_prelimQ)
+summary(Ward_prelim3Q)
+summary(Franktown3Q)
 
-p <- ggplot(prelimDO_2020, aes(x=timestamp, y=(Dissolved.Oxygen.Saturation), colour =as.factor(Site), shape=(Seiral))) +
-  geom_line()  + ylab("DO Sat") +
+prelimDOpart_2020 <- rbind(Ward_prelim3Q, General_prelim3Q, Blackwood_prelim3Q)
+prelimDOpart1_2020 <- subset(prelimDOpart_2020,
+                             select=c(Temperature, Dissolved.Oxygen, 
+                                      Q, Site, Seiral, timestamp))
+
+Franktownpart1_2020 <- subset(Franktown3Q,
+                             select=c(Temp, DO, 
+                                      Q, Site, Seiral, Time))
+
+names(prelimDOpart1_2020)[1] <- "Temp"
+names(prelimDOpart1_2020)[2] <- "DO"
+names(prelimDOpart1_2020)[6] <- "Time"
+
+prelimDO_2020 <- rbind(prelimDOpart1_2020, Franktownpart1_2020)
+prelimDO_2020_2 <- subset(prelimDO_2020, Time > "2020-10-01 12:00:00" & Time < "2020-10-15 12:00:00")
+
+
+## visualize this:
+# Value used to transform the data
+coeff <- 1.75
+
+# A few constants
+DOColor <- "#68acd9"
+#rgb(0.2, 0.6, 0.9, 1)
+TempColor <- "#224b66"
+
+fig2 <- ggplot(prelimDO_2020_2, aes(x=Time)) +
+  geom_line( aes(y=DO ), size=0.5, color=DOColor) +
+  geom_line( aes(y=(Temp)/coeff), size=0.5, color=TempColor) +
+  scale_y_continuous(
+    # Features of the first axis
+    name = 'DO ('~mg~L^-1*')',
+    # Add a second axis and specify its features
+    sec.axis = sec_axis(~.*coeff, name="Temp (degreeC)")
+  ) + 
+  #scale_x_continuous(limits = c(2000, 2020), breaks=seq(2000,2020,4)) +
+  theme_bw() +
+ 
+  theme(
+    axis.title.y = element_text(color = DOColor, size=13),
+    axis.title.y.right = element_text(color = TempColor, size=13)
+  )  + facet_wrap(~Site)
+
+#ggsave(paste0(outputDir,"/MSM_DOcomparison.jpeg"), fig2, scale = 1.5, width = 12, height = 6, units = c("cm"), dpi = 500)
+
+
+
+p <- ggplot(prelimDO_2020, aes(x=Time, y=(DO), colour =as.factor(Site), shape=(Seiral))) +
+  geom_line()  + ylab("DO") +
   theme_classic() + facet_wrap(~Site)
 

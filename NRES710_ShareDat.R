@@ -19,6 +19,7 @@ library(lme4)
 library(lmerTest)
 library(MuMIn)
 library(PerformanceAnalytics) 
+library(car)
 se <- function(x) sd(x) / sqrt(length(x))
 
 
@@ -47,8 +48,7 @@ range(datcheck$Snow)
 
 df_ave <- df %>%
   # Create grouping variable for water year "week-year"
-  mutate(
-    w_wkyr= paste(df$week, df$wtr_yr)) %>%
+  mutate(w_wkyr= paste(df$week, df$wtr_yr)) %>%
   # Average all data averaged by week-year
   group_by(GaugeSite, w_wkyr, wtr_yr, nmonth, Relief_T, Contrib_Drainage_Area) %>%
   summarise("WtempC" = mean(WtempC, na.rm = TRUE), 
@@ -59,7 +59,8 @@ df_ave <- df %>%
             "SWEin"= mean(SWEin, na.rm = TRUE),
             "AirTempC"= mean(AirTempCave, na.rm = TRUE),
             "AirTempCMax"= mean(AirTempCmax, na.rm = TRUE),
-            "AirTempCMin"= mean(AirTempCmin, na.rm = TRUE)) 
+            "AirTempCMin"= mean(AirTempCmin, na.rm = TRUE),
+            "sumROS"= sum(ROS2_YN, na.rm = TRUE)) 
 
 
 ## ---------------------------
@@ -89,6 +90,7 @@ chart.Correlation(my_cor, histogram=TRUE, pch=19) # prints the cor plot
 ## ---------------------------
 # group by max annually: _MaxA
 df_MaxA <- df_ave %>%
+  subset(nmonth > 11 | nmonth < 5) %>%
   group_by(GaugeSite, wtr_yr, Relief_T, Contrib_Drainage_Area) %>%
   summarise("WtempC" = max(WtempC, na.rm = TRUE), 
             "discharge"= max(discharge, na.rm = TRUE),
@@ -96,7 +98,8 @@ df_MaxA <- df_ave %>%
             "PrecipIncrem"= max(PrecipIncrem, na.rm = TRUE),
             "SnowDepth"= max(SnowDepth, na.rm = TRUE),
             "SWEin"= max(SWEin, na.rm = TRUE),
-            "AirTempC"= max(AirTempCMax, na.rm = TRUE)) 
+            "AirTempC"= max(AirTempCMax, na.rm = TRUE),
+            "sumROS"= sum(sumROS, na.rm = TRUE)) 
 
 # remove -inf values 
 summary(df_MaxA)
@@ -105,9 +108,8 @@ df_MaxA[is.na(df_MaxA)]<-0
 
 # Get an idea of transformed data shape and level of correlation
 dim(df_MaxA)
-my_cor <- df_MaxA[, c(5:11)] # select the columns with discrete variables only 
+my_cor <- df_MaxA[, c(5:12)] # select the columns with discrete variables only 
 chart.Correlation(my_cor, histogram=TRUE, pch=19) # prints the cor plot
-
 
 
 ## ---------------------------
@@ -147,8 +149,6 @@ summary(lm_AveA4) # sig
 hist(residuals(lm_AveA4))
 plot(lm_AveA4) #
 
-
-
 # 1. discharge ~ SWE 
 lm_MaxA1 <- lm(discharge ~  + scale(SWEin), data = df_MaxA) 
 summary(lm_MaxA1) # sig steeper slope than ave. 
@@ -177,111 +177,46 @@ plot(lm_MaxA4)
 
 
 ## ---------------------------
-# IIc. Statistical tests: lmer: y ~ x + (1|Gauge Site) as explained by df_MaxA 
+# II. Trying to figure out the scale: Annual, weekly, daily?
+    # Statistical tests: lmer: y ~ x + (1|Gauge Site) as explained by df_MaxA 
 
+# Annual scale:
 glmm_MaxGlobal <- lmer(discharge ~  + scale(SWEin) + 
-                         scale(WtempC) + 
                          scale(AirTempC) + 
                          scale(PrecipIncrem) + 
-                         scale(wtr_yr) +
+                         scale(sumROS) +
                          (1|GaugeSite), data = df_MaxA)
 summary(glmm_MaxGlobal) 
 hist(residuals(glmm_MaxGlobal))
 r.squaredGLMM(glmm_MaxGlobal) 
-
-
-glmm_Max1 <- lmer(discharge ~  + scale(SWEin) + 
-                         scale(WtempC) + 
-                         scale(AirTempC) + 
-                         scale(PrecipIncrem) + 
-                         #scale(wtr_yr) +
-                         (1|GaugeSite), data = df_MaxA)
-summary(glmm_Max1) 
-hist(residuals(glmm_Max1))
-r.squaredGLMM(glmm_Max1) 
-
-
-glmm_Max2 <- lmer(discharge ~  + scale(SWEin) + 
-                    #scale(WtempC) + 
-                    scale(AirTempC) + 
-                    scale(PrecipIncrem) + 
-                    #scale(wtr_yr) +
-                    (1|GaugeSite), data = df_MaxA)
-summary(glmm_Max2) 
-hist(residuals(glmm_Max2))
-r.squaredGLMM(glmm_Max2) 
-
-
-glmm_Max3 <- lmer(discharge ~  + scale(SWEin) + 
-                    #scale(WtempC) + 
-                    #scale(AirTempC) + 
-                    scale(PrecipIncrem) + 
-                    #scale(wtr_yr) +
-                    (1|GaugeSite), data = df_MaxA)
-summary(glmm_Max3) 
-hist(residuals(glmm_Max3))
-r.squaredGLMM(glmm_Max3) 
-
-AIC(glmm_MaxGlobal, # global still looks the best. 
-    glmm_Max1, 
-    glmm_Max2, 
-    glmm_Max3) 
-
+vif(glmm_MaxGlobal)
 
 
 ## ---------------------------
-# III. Statistical tests: Discharge ~ R-O-S events
+# III. Statistical tests: Daily scale
 
-# Isolate for winter obs only from original df
-df_winter <- (subset(df, nmonth > 12 | nmonth < 5)) 
-summary(df_winter)
+# probably dealing with zero inflation...
+glm_wMaxGlobal <- lmer(discharge ~  scale(SWEin) + 
+                         scale(WtempC) + 
+                         scale(AirTempCave) + 
+                         scale(PrecipIncrement) + 
+                         scale(wtr_yr) +
+                         ROS2_YN +
+                         (1|GaugeSite), data = df_winter)
+summary(glm_wMaxGlobal) 
+hist(residuals(glm_wMaxGlobal))
+r.squaredGLMM(glm_wMaxGlobal) 
+vif(glm_wMaxGlobal)
 
-# probably dealing with zero inflation lets buff up to winter week maximums. 
-lm.ROS1 <- lm(discharge ~ scale(ROS_0NY) + 
-                scale(wtr_yr), data = df_winter)
-summary(lm.ROS1) 
-hist(residuals(lm.ROS1)) 
-r.squaredGLMM(lm.ROS1) 
+# Water wk-yr scale:
+df_winter_ave <- (subset(df_ave, nmonth > 11 | nmonth < 5)) 
+summary(df_winter_ave)
 
-lm.ROS2 <- lm(discharge ~ scale(ROS2_YN) + 
-                scale(wtr_yr), data = df_winter)
-summary(lm.ROS2) 
-hist(residuals(lm.ROS2)) 
-r.squaredGLMM(lm.ROS2) 
-
-lm.ROS3 <- lmer(discharge ~ scale(ROS3_YN) + 
-                  scale(wtr_yr) + (1|GaugeSite), data = df_winter)
-summary(lm.ROS3) 
-hist(residuals(lm.ROS3)) 
-r.squaredGLMM(lm.ROS3) 
-
-lm.ROS4 <- lmer(discharge ~ scale(ROS_temp1) +  
-                  scale(wtr_yr) + (1|GaugeSite), data = df_winter)
-summary(lm.ROS4) 
-hist(residuals(lm.ROS4)) 
-r.squaredGLMM(lm.ROS4) 
-
-# not sure how best to move forward the might pause for some visualizations
-Fig_SWEFlow <- ggplot(df, aes(x=ROS3_YN, y=discharge, color=GaugeSite)) +
-  geom_point(aes(x=ROS3_YN, y=discharge, color=GaugeSite),shape =1, size =2) +
-  theme_classic() + 
-  scale_color_manual(values=c("#3B6064", "#C9E4CA", "#87BBA2", "#55828B")) +
-  #ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("SWE (in)") + 
-  guides(fill = guide_legend(override.aes = list(color = NA)), 
-         color = FALSE,
-         shape = FALSE) +
-  facet_wrap(~GaugeSite)
-
-# so it looks like rain on snow is just a binary level and so not sure how best to analyze 
-# for those areas that experienced a rain on snow event and compare the dishcharge before and after. 
-
-inds = which(df$ROS2_YN == 1)
-# We use lapply() to get all rows for all indices, result is a list
-rows <- lapply(inds, function(x) (x-5):(x+5))
-# With unlist() you get all relevant rows
-df_ROS <- df[unlist(rows),]
-
-# write.csv(df_ROS, paste0(outputDir, "df_ROS.csv")) 
-
-
-
+glmm_wyMaxGlobal <- lmer(discharge ~ scale(SWEin) + 
+                         scale(AirTempC) + 
+                         scale(PrecipIncrem) + 
+                         scale(sumROS) +
+                         (1|GaugeSite), data = df_winter_ave)
+summary(glmm_wyMaxGlobal) 
+hist(residuals(glmm_wyMaxGlobal)) 
+r.squaredGLMM(glmm_wyMaxGlobal) 
