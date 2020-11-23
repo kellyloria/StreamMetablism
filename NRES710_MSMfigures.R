@@ -66,6 +66,24 @@ Fig_SWEFlow <- ggplot(df_MaxA, aes(x=SWEin, y=discharge, color=GaugeSite)) +
          shape = FALSE) +
   facet_wrap(~GaugeSite)
 
+
+Fig_SWEFlow <- ggplot(df_MaxA, aes(x=PrecipIncrem, y=discharge, color=GaugeSite)) +
+  geom_point(aes(x=PrecipIncrem, y=discharge, color=GaugeSite),shape =19, size =2) +
+  stat_smooth(method="lm", se=T, colour="#636363", level = 0.95) +
+  scale_x_continuous(limits = c(0, 3), breaks=seq(0,3,0.75)) +
+  scale_y_continuous(limits = c(-25, 355), breaks=seq(0, 350, 70)) +
+  theme_classic() +
+  scale_color_manual(values=c("#3B6064", "#C9E4CA", "#87BBA2", "#55828B")) +
+  ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("SWE (in)") +
+  guides(fill = guide_legend(override.aes = list(color = NA)),
+         color = FALSE,
+         shape = FALSE) +
+  facet_wrap(~GaugeSite)
+
+# hist(df_MaxA$PrecipIncrem)
+# hist(df_MaxA$SWEin)
+
+
 ggsave(paste0(outputDir,"/MSM_SWEFlow_NRES710.pdf"), Fig_SWEFlow, scale = 1.5, width = 10, height = 8, units = c("cm"), dpi = 500)
 
 Fig2_SWEFlow <- ggplot(df_MaxA, aes(x=SWEin, y=discharge, color=GaugeSite)) +
@@ -83,7 +101,44 @@ Fig2_SWEFlow <- ggplot(df_MaxA, aes(x=SWEin, y=discharge, color=GaugeSite)) +
 ggsave(paste0(outputDir,"/MSM_SWEFlow_NRES710_v2.pdf"), Fig2_SWEFlow, scale = 1.5, width = 8, height = 6, units = c("cm"), dpi = 500)
 
 
+### Look at ROS
+df_ave
 
+# create column for ROS that is just 0 or no
+df_plot <- df_ave %>%
+  subset(nmonth > 11 | nmonth < 5) %>%
+  mutate(
+    ROS_lab=
+      case_when(
+        is.na(sumROS) ~ "No",
+        sumROS<0 ~ "No",
+        sumROS>0 ~ "Yes", 
+        TRUE ~ as.character(sumROS)))
+
+df_plot$ROS_lab
+?case_when
+Fig3_SWEFlow <- ggplot(df_plot, aes(x=SWEin, y=discharge, color=GaugeSite)) +
+  geom_point(aes(x=SWEin, y=discharge, color=GaugeSite, shape=as.factor(ROS_lab)), size =2) +
+  stat_smooth(method="lm", se=T, colour="#636363", level = 0.95) +
+  scale_x_continuous(limits = c(0, 75), breaks=seq(0,75,15)) +
+  scale_y_continuous(limits = c(0, 355), breaks=seq(0, 350, 70)) +
+  theme_classic() + 
+  scale_color_manual(name = "Gauge site",
+                     values=c("#3B6064", "#C9E4CA", "#87BBA2", "#55828B")) +
+  ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("SWE (in)")  + scale_shape_discrete(name = "R-O-S event")
+
+ggsave(paste0(outputDir,"/MSM_SWEFlow_NRES710_v3.pdf"), Fig3_SWEFlow, scale = 1.5, width =13, height = 8, units = c("cm"), dpi = 500)
+
+
+Fig4_SWEFlow <- ggplot(df_plot, aes(x=PrecipIncrem, y=discharge, color=GaugeSite)) +
+  geom_point(aes(x=PrecipIncrem, y=discharge, color=GaugeSite, shape=as.factor(ROS_lab)), size =2) +
+  stat_smooth(method="lm", se=T, colour="#636363", level = 0.95) +
+  scale_x_continuous(limits = c(0, 3), breaks=seq(0,3,0.75)) +
+  scale_y_continuous(limits = c(0, 355), breaks=seq(0, 350, 70)) +
+  theme_classic() + 
+  scale_color_manual(name = "Gauge site",
+                     values=c("#3B6064", "#C9E4CA", "#87BBA2", "#55828B")) +
+  ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("SWE (in)")  + scale_shape_discrete(name = "R-O-S event")
 
 
 # 

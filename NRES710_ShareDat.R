@@ -34,23 +34,16 @@ if(length(tmp1date) == length(tmp1date[!is.na(tmp1date)])){df$Date <- tmp1date }
 rm(tmpDateFormat,tmp1date) 
 summary(df)
 
-# Double check column organization to make sure data is true
-datcheck <- subset(df, Snow_0NY == 1) # looks good. 
-summary(datcheck)
-range(datcheck$Snow)
-
-
 ## ---------------------------
 # IIa. Statistical tests: What parameters best describe the relationship between snow pack and discharge?
-    # df is in daily obs for 20 so some data gaps exist.
-    # un-tested thought but could (1) keep discharge data separate then left join winter based mean and max 
-    # or (2) only look at these transformed/summarized data for winter
+    # df is in daily obs for 20 years so some data gaps exist.
+    # instead of infilling I will average at the week level for each year.
 
 df_ave <- df %>%
   # Create grouping variable for water year "week-year"
   mutate(w_wkyr= paste(df$week, df$wtr_yr)) %>%
   # Average all data averaged by week-year
-  group_by(GaugeSite, w_wkyr, wtr_yr, nmonth, Relief_T, Contrib_Drainage_Area) %>%
+  group_by(GaugeSite, w_wkyr, wtr_yr, nmonth, Relief_T, Contrib_Drainage_Area, SNOTELSite) %>%
   summarise("WtempC" = mean(WtempC, na.rm = TRUE), 
             "discharge"= mean(discharge, na.rm = TRUE),
             "PrecipAccum"= mean(PrecipAccum.aveR, na.rm = TRUE),
@@ -66,7 +59,7 @@ df_ave <- df %>%
 ## ---------------------------
 # group by mean annually: _AveA
 df_AveA <- df_ave %>%
-  group_by(GaugeSite, wtr_yr, Relief_T, Contrib_Drainage_Area) %>%
+  group_by(GaugeSite, wtr_yr, Relief_T, Contrib_Drainage_Area, SNOTELSite) %>%
   summarise("WtempC" = mean(WtempC, na.rm = TRUE), 
             "discharge"= mean(discharge, na.rm = TRUE),
             "PrecipAccum"= mean(PrecipAccum, na.rm = TRUE),
@@ -80,18 +73,12 @@ summary(df_AveA)
 is.na(df_AveA)<-sapply(df_AveA, is.infinite)
 df_AveA[is.na(df_AveA)]<-0
 
-# Get an idea of transformed data shape and level of correlation
-dim(df_AveA)
-my_cor <- df_AveA[, c(5:11)] # select the columns with discrete variables only 
-chart.Correlation(my_cor, histogram=TRUE, pch=19) # prints the cor plot
-
-
 
 ## ---------------------------
 # group by max annually: _MaxA
 df_MaxA <- df_ave %>%
   subset(nmonth > 11 | nmonth < 5) %>%
-  group_by(GaugeSite, wtr_yr, Relief_T, Contrib_Drainage_Area) %>%
+  group_by(GaugeSite, wtr_yr, Relief_T, Contrib_Drainage_Area, SNOTELSite) %>%
   summarise("WtempC" = max(WtempC, na.rm = TRUE), 
             "discharge"= max(discharge, na.rm = TRUE),
             "PrecipAccum"= max(PrecipAccum, na.rm = TRUE),
@@ -106,117 +93,103 @@ summary(df_MaxA)
 is.na(df_MaxA)<-sapply(df_MaxA, is.infinite)
 df_MaxA[is.na(df_MaxA)]<-0
 
-# Get an idea of transformed data shape and level of correlation
-dim(df_MaxA)
-my_cor <- df_MaxA[, c(5:12)] # select the columns with discrete variables only 
-chart.Correlation(my_cor, histogram=TRUE, pch=19) # prints the cor plot
-
 
 ## ---------------------------
 # IIb. Statistical tests: lm: y ~ x
-    # 1. discharge ~ SWE 
-    # 2. discharge ~ snow depth
-    # 3. discharge ~ precip accumulation
-    # 4. discharge ~ AirTemp 
+# 1. discharge ~ SWE 
+# 2. discharge ~ snow depth
+# 3. discharge ~ precip accumulation
+# 4. discharge ~ precip increment 
+# 5. discharge ~ AirTemp 
+# 6. discharge ~ Water year  
 
- # Are these relationships best explained by df_MaxA or df_AveA
+# Are these relationships best explained by df_MaxA or df_AveA
 summary(df_MaxA)
 summary(df_AveA)
+    # *NOTE: Slopes were more extreme for df_MaxA so only shown here.
 
-layout(matrix(1:4,2,byrow = T))
 
-# 1. discharge ~ SWE 
-lm_AveA1 <- lm(discharge ~ scale(SWEin), data = df_AveA) 
-summary(lm_AveA1) # sig  
-hist(residuals(lm_AveA1))
-plot(lm_AveA1) # pretty normally distributed and best fit model 
-
-# 2. discharge ~ snow depth
-lm_AveA2 <- lm(discharge ~ scale(SnowDepth), data = df_AveA) 
-summary(lm_AveA2) # sig  
-hist(residuals(lm_AveA2))
-plot(lm_AveA2) # 
-
-# 3. discharge ~ precip accumulation
-lm_AveA3 <- lm(discharge ~ scale(PrecipAccum), data = df_AveA) 
-summary(lm_AveA3) # sig  
-hist(residuals(lm_AveA3))
-plot(lm_AveA3) #
-
-# 4. discharge ~ AirTemp 
-lm_AveA4 <- lm(discharge ~  scale(AirTempC), data = df_AveA) 
-summary(lm_AveA4) # sig  
-hist(residuals(lm_AveA4))
-plot(lm_AveA4) #
+#layout(matrix(1:4,2,byrow = T))
 
 # 1. discharge ~ SWE 
 lm_MaxA1 <- lm(discharge ~  + scale(SWEin), data = df_MaxA) 
 summary(lm_MaxA1) # sig steeper slope than ave. 
-hist(residuals(lm_MaxA1))
-plot(lm_MaxA1) # pretty normally distributed and best fit model 
+hist(residuals(lm_MaxA1)) # fairly normal
+#plot(lm_MaxA1) # pretty normally distributed and best fit model 
 
 # 2. discharge ~ snow depth
 lm_MaxA2 <- lm(discharge ~  + scale(SnowDepth), data = df_MaxA) 
-summary(lm_MaxA2) # sig steeper slope than ave. 
-hist(residuals(lm_MaxA2))
-plot(lm_MaxA2) # pretty normally distributed and best fit model 
+summary(lm_MaxA2) # sig . 
+hist(residuals(lm_MaxA2)) # some skew
+#plot(lm_MaxA2) 
 
 # 3. discharge ~ precip accumulation
 lm_MaxA3 <- lm(discharge ~ scale(PrecipAccum), data = df_MaxA) 
 summary(lm_MaxA3) # sig  
-hist(residuals(lm_MaxA3))
-plot(lm_MaxA3) #
+hist(residuals(lm_MaxA3)) # normal
+#plot(lm_MaxA3) #
 
-# 4. discharge ~ AirTemp 
-lm_MaxA4 <- lm(discharge ~  scale(AirTempC), data = df_MaxA) 
+# 4. discharge ~ precip increment 
+lm_MaxA4 <- lm(discharge ~  scale(PrecipIncrem), data = df_MaxA) 
 summary(lm_MaxA4) # sig  
-hist(residuals(lm_MaxA4))
-plot(lm_MaxA4)
+hist(residuals(lm_MaxA4)) # more more than precip accum.
+#plot(lm_MaxA4)
 
-# Discharge slopes are more extreme for df_MaxA
+# 5. discharge ~ AirTemp 
+lm_MaxA5 <- lm(discharge ~  scale(AirTempC), data = df_MaxA) 
+summary(lm_MaxA5) # sig  
+hist(residuals(lm_MaxA5)) # scew
+#plot(lm_MaxA5)
 
+lm_MaxA6 <- lm(discharge ~  scale(wtr_yr), data = df_MaxA) 
+summary(lm_MaxA6) # NOT sig  
+hist(residuals(lm_MaxA6)) # also skew.
+#plot(lm_MaxA6)
+
+# All parameters appear to be related to discharge aside from Water year. 
+# So need to see which predictors we could include together in a model
+
+## ---------------------------
+# Correlation of predictors for glmm model selection:
+  # Get an idea of transformed data shape and level of correlation
+dim(df_MaxA)
+my_cor <- df_MaxA[, c(6:12)] # select the columns with discrete variables only 
+chart.Correlation(my_cor, histogram=TRUE, pch=19) # prints the cor plot
+    # SWE and precip increment are most strongly correlated as predictors so want to include in glmm
+    # Snow depth, precip accum, and precip increment are all <0.65 related so will avoid including in same glmm.
 
 ## ---------------------------
 # II. Trying to figure out the scale: Annual, weekly, daily?
     # Statistical tests: lmer: y ~ x + (1|Gauge Site) as explained by df_MaxA 
 
 # Annual scale:
-glmm_MaxGlobal <- lmer(discharge ~  + scale(SWEin) + 
-                         scale(AirTempC) + 
-                         scale(PrecipIncrem) + 
-                         scale(sumROS) +
-                         (1|GaugeSite), data = df_MaxA)
-summary(glmm_MaxGlobal) 
-hist(residuals(glmm_MaxGlobal))
-r.squaredGLMM(glmm_MaxGlobal) 
-vif(glmm_MaxGlobal)
+glmm_MaxGlobal2 <- lmer(discharge ~  scale(SWEin) + 
+                          scale(AirTempC) + 
+                          scale(PrecipIncrem) + 
+                          scale(sumROS) +
+                          (1|GaugeSite) + 
+                          (1|SNOTELSite), data = df_MaxA)
+summary(glmm_MaxGlobal2) 
+hist(residuals(glmm_MaxGlobal2))
+r.squaredGLMM(glmm_MaxGlobal2) 
+vif(glmm_MaxGlobal2) # variance looks equally shared among predictors 
+
+GSVar <- 282.87
+SLVar <- 61.02
+ResVar <- 970.51
+TotalVar <- (GSVar + SLVar + ResVar)
+
+((GSVar + SLVar)/TotalVar) *100
+(GSVar/TotalVar) *100
+
+df_delete <- df %>%
+  subset(nmonth > 11 | nmonth < 5) 
+summary(df_delete)
+
+sd(na.omit(df_delete$SWEin))
+mean(na.omit(df_delete$PrecipIncrement))
 
 
-## ---------------------------
-# III. Statistical tests: Daily scale
+sd(na.omit(df_delete$AirTempCave))
 
-# probably dealing with zero inflation...
-glm_wMaxGlobal <- lmer(discharge ~  scale(SWEin) + 
-                         scale(WtempC) + 
-                         scale(AirTempCave) + 
-                         scale(PrecipIncrement) + 
-                         scale(wtr_yr) +
-                         ROS2_YN +
-                         (1|GaugeSite), data = df_winter)
-summary(glm_wMaxGlobal) 
-hist(residuals(glm_wMaxGlobal))
-r.squaredGLMM(glm_wMaxGlobal) 
-vif(glm_wMaxGlobal)
 
-# Water wk-yr scale:
-df_winter_ave <- (subset(df_ave, nmonth > 11 | nmonth < 5)) 
-summary(df_winter_ave)
-
-glmm_wyMaxGlobal <- lmer(discharge ~ scale(SWEin) + 
-                         scale(AirTempC) + 
-                         scale(PrecipIncrem) + 
-                         scale(sumROS) +
-                         (1|GaugeSite), data = df_winter_ave)
-summary(glmm_wyMaxGlobal) 
-hist(residuals(glmm_wyMaxGlobal)) 
-r.squaredGLMM(glmm_wyMaxGlobal) 
