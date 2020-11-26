@@ -40,7 +40,6 @@ fig1 <- ggplot(df_MaxA, aes(x=wtr_yr)) +
 
 ggsave(paste0(outputDir,"/MSM_winterHydroregimeNRES710.pdf"), fig1, scale = 1.5, width = 12, height = 6, units = c("cm"), dpi = 500)
 
-range(fig5.df$BM.HSHO)
 
 ## ---------------------------
 # Figures for max Discharge SWE and ROS
@@ -115,6 +114,15 @@ df_plot <- df_ave %>%
         sumROS>0 ~ "Yes", 
         TRUE ~ as.character(sumROS)))
 
+df_plot2 <- df_MaxA %>%
+  mutate(
+    ROS_lab=
+      case_when(
+        is.na(sumROS) ~ "No",
+        sumROS<0 ~ "No",
+        sumROS>0 ~ "Yes", 
+        TRUE ~ as.character(sumROS)))
+
 df_plot$ROS_lab
 ?case_when
 Fig3_SWEFlow <- ggplot(df_plot, aes(x=SWEin, y=discharge, color=GaugeSite)) +
@@ -136,12 +144,40 @@ Fig4_SWEFlow <- ggplot(df_plot, aes(x=PrecipIncrem, y=discharge, color=GaugeSite
   scale_x_continuous(limits = c(0, 3), breaks=seq(0,3,0.75)) +
   scale_y_continuous(limits = c(0, 355), breaks=seq(0, 350, 70)) +
   theme_classic() + 
+  scale_color_manual(
+                     values=c("#3B6064", "#C9E4CA", "#87BBA2", "#55828B")) +
+  ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("Precipitation increment (in)")  +
+  guides(fill = guide_legend(override.aes = list(color = NA)),
+        color = FALSE,
+        shape = FALSE) +
+  annotate("text", x = 1, y = 352, label = "Daily observations (12 hr)")
+  
+
+
+#ggsave(paste0(outputDir,"/MSM_ROSFlow_NRES710_v3.pdf"), Fig4_SWEFlow, scale = 1.3, width =13, height = 8, units = c("cm"), dpi = 500)
+
+
+Fig5_SWEFlow <- ggplot(df_plot2, aes(x=PrecipIncrem, y=discharge, color=GaugeSite)) +
+  geom_point(aes(x=PrecipIncrem, y=discharge, color=GaugeSite, shape=as.factor(ROS_lab)), size =2) +
+  stat_smooth(method="lm", se=T, colour="#636363", level = 0.95) +
+  scale_x_continuous(limits = c(0, 3), breaks=seq(0,3,0.75)) +
+  scale_y_continuous(limits = c(0, 355), breaks=seq(0, 350, 70)) +
+  theme_classic() + 
   scale_color_manual(name = "Gauge site",
                      values=c("#3B6064", "#C9E4CA", "#87BBA2", "#55828B")) +
-  ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("SWE (in)")  + scale_shape_discrete(name = "R-O-S event")
+  ylab('Stream discharge ('~ft^3~s^-1*')') + xlab("Precipitation increment (in)")  + 
+  scale_shape_discrete(name = "R-O-S event") +
+  annotate("text", x = 1.2, y = 352, label = "Maximum annual observations")
+
+library(gridExtra)
+pannel_b <- grid.arrange(Fig4_SWEFlow, Fig5_SWEFlow,
+                         nrow = 1,
+                         widths = c(1.5,2))
+
+ggsave(paste0(outputDir,"/MSM_PIflowROS_NRES710_v3.pdf"), pannel_b, scale = 1, width =22, height = 8, units = c("cm"), dpi = 500)
 
 
-# 
+
 # 
 # Fig_ROSFlow <- ggplot(dmax_winter, aes(x=ROS_max, y=discharge.max.yr, color=GaugeSite)) +
 #   geom_point(aes(x=ROS_max, y=(discharge.max.yr), color=GaugeSite),shape =1, size=2) +
