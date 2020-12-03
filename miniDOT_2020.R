@@ -7,14 +7,14 @@
 
 ## ---------------------------
 #Load packages
-library(plyr)
-library(dplyr)
+#library(plyr)
+#library(dplyr)
+library(tidyverse)
 library(ggplot2)
 library(cowplot)
-library(streamMetabolizer)
 library(lubridate)
 library(reshape2)
-library(LakeMetabolizer)
+
 
 ## ---------------------------
 # File path setup:

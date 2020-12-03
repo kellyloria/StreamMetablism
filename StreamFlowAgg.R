@@ -22,6 +22,8 @@ library(zoo)
 
 ## ---------------------------
 # Water Quality Portal
+  # List of all values:
+  # https://help.waterdata.usgs.gov/code/parameter_cd_query?fmt=rdb&inline=true&group_cd=%
 ## ---------------------------
 ## Attempt to load in Sagehen data 10343500
 

@@ -19,6 +19,8 @@ library(tidyr)
 library(ggplot2)
 library(lme4)
 library(rstan)
+library(unitted)
+
 ##
 ## ---------------------------
 # File path setup:
@@ -28,7 +30,7 @@ if (dir.exists('/Users/kellyloria/Documents/UNR_2020/Fall2020Projects')){
 }
 
 ## ---------------------------
-# Data Preparation: 
+# Data Preparation: From the tutorial
 # http://usgs-r.github.io/streamMetabolizer/articles/data_prep.html
 
 dat <- data_metab(num_days='3', res='15', attach.units=TRUE)
@@ -58,59 +60,21 @@ dat %>% unitted::v() %>%
 metab_inputs('mle', 'data')
 
 ##
-# Prepare the timestamps
+# package that might hekp with other data preparation:
+# ?calc_depth()
+# ?calc_DO_sat()
+# ?calc_light()
+# ?convert_date_to_doyhr()
+# ?convert_localtime_to_UTC()
+# ?convert_UTC_to_solartime()
+# ?convert_k600_to_kGAS()
+# ?convert_PAR_to_SW()
 
-# Starting with numeric datetimes, e.g., from PMEs
-num.time <- 1471867200
-(posix.time.localtz <- as.POSIXct(num.time, origin='1970-01-01', tz='UTC'))
-# If you have datetimes stored in seconds since 1/1/1970 at Laramie, WY (i.e., in MST, no daylight savings):
-num.time <- 1471867200
-(posix.time.nominalUTC <- as.POSIXct(num.time, origin='1970-01-01', tz='UTC')) # the numbers get treated as UTC no matter what tz you request
-(posix.time.localtz <- lubridate::force_tz(posix.time.nominalUTC, 'Etc/GMT+7')) # +7 = mountain standard time
-
-# Starting with text timestamps:
-#   If you have datetimes stored as text timestamps in UTC, you can bypass the conversion to local time and just start with UTC. 
-#   Then rather than using calc_solar_time() in Step 2, you’ll use convert_UTC_to_solartime()
-text.time <- '2016-08-22 12:00:00'
-(posix.time.utc <- as.POSIXct(text.time, tz='UTC'))
-
-text.time <- '2016-08-22 12:00:00'
-(posix.time.localtz <- as.POSIXct(text.time, format="%Y-%m-%d %H:%M:%S", tz='America/New_York'))
-
-text.time <- '2016-08-22 12:00:00'
-(posix.time.localtz <- as.POSIXct(text.time, format="%Y-%m-%d %H:%M:%S", tz='Etc/GMT+5'))
-
-# Starting with chron datetimes:
-#   If you have datetimes stored in the chron time format in EST (no daylight savings):
-
-chron.time <- chron::chron('08/22/16', '12:00:00')
-time.format <- "%Y-%m-%d %H:%M:%S"
-text.time <- format(chron.time, time.format) # direct as.POSIXct time works poorly
-(posix.time.localtz <- as.POSIXct(text.time, format=time.format, tz='Etc/GMT+5'))
-
-# Step 2: Solar time:
-lubridate::tz(posix.time.localtz) # yep, we want and have the code for EST
-(posix.time.solar <- streamMetabolizer::calc_solar_time(posix.time.localtz, longitude=-106.3))
-
-
-##
-# Other data preparation:
-?calc_depth()
-?calc_DO_sat()
-?calc_light()
-?convert_date_to_doyhr()
-?convert_localtime_to_UTC()
-?convert_UTC_to_solartime()
-?convert_k600_to_kGAS()
-?convert_PAR_to_SW()
-
-## ---------------------------
 # streamMetabolizer Quickstart Guide:
 
 # Preparing the input data:
-dat <- data_metab(num_days='3', res='15', day_start=4, day_end=28, attach.units=TRUE)
+#dat <- data_metab(num_days='3', res='15', day_start=4, day_end=28, attach.units=TRUE)
 
-## ---------------------------
 # Configuring the model: 
 
 # There are two steps to configuring a metabolism model in streamMetabolizer.
@@ -178,8 +142,50 @@ get_fit(mm) %>%
 
 
 ## ---------------------------
-# Data Preparation: For Blackwood: Blackwood_prelim3Q
-range(Blackwood_prelim3Q$timestamp)
+# Kelly Data Preparation: For Blackwood: Blackwood_prelim3Q
+
+# DO data: Blackwood:
+Blackwood_prelim <- read.delim(paste0(inputDir, "/Blackwood_7450-617000/Cat_copy.TXT"), header=T, sep = ',')
+summary(Blackwood_prelim)
+Blackwood_prelim$Site <- "Blackwood"
+Blackwood_prelim$Seiral <- "617000"
+
+# attempting to convert dt1$timestamp dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d %H:%M:%S" 
+tmp1timestamp<-as.POSIXct(Blackwood_prelim$Pacific.Standard.Time,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1timestamp) == length(tmp1timestamp[!is.na(tmp1timestamp)])){Blackwood_prelim$timestamp <- tmp1timestamp } else {print("Date conversion failed for dt1$timestamp. Please inspect the data and do the date conversion yourself.")}    
+
+Blackwood_prelimQ <- subset(Blackwood_prelim,timestamp >= as.POSIXct('2020-09-27 15:00:00') & 
+                              timestamp <= as.POSIXct('2020-10-11 10:30:00'))
+range(Sept_CalQ$timestamp)
+
+qplot(timestamp, Dissolved.Oxygen.Saturation, data = Blackwood_prelimQ, geom="line", ylab = "Sat", color = factor(Site)) +
+  theme(axis.text.x = element_text(angle = 25, vjust = 1.0, hjust = 1.0))
+
+# Add in new download: 2020-10-29
+Blackwood_prelim2 <- read.delim(paste0(inputDir, "/Blackwood_7450-617000/20201029/7450-617000/BWCatCopy.txt"), header=T, sep = ',')
+summary(Blackwood_prelim2)
+Blackwood_prelim2$Site <- "Blackwood"
+Blackwood_prelim2$Seiral <- "617000"
+
+# attempting to convert dt1$timestamp dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d %H:%M:%S" 
+tmp1timestamp<-as.POSIXct(Blackwood_prelim2$Pacific.Standard.Time,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1timestamp) == length(tmp1timestamp[!is.na(tmp1timestamp)])){Blackwood_prelim2$timestamp <- tmp1timestamp } else {print("Date conversion failed for dt1$timestamp. Please inspect the data and do the date conversion yourself.")}    
+
+Blackwood_prelim2Q <- subset(Blackwood_prelim2,timestamp >= as.POSIXct('2020-10-11 11:30:00') & 
+                               timestamp <= as.POSIXct('2020-10-29 12:00:00'))
+range(Blackwood_prelim2Q$timestamp)
+
+Blackwood_prelim3Q <- rbind(Blackwood_prelimQ, Blackwood_prelim2Q)
+
+plot_grid(
+  ggplot(Blackwood_prelim3Q, aes(timestamp, Dissolved.Oxygen)) + geom_point(),
+  ggplot(Blackwood_prelim3Q, aes(timestamp, Temperature)) + geom_point(),
+  ggplot(Blackwood_prelim3Q, aes(timestamp, Q)) + geom_point(),
+  ncol=1, align="hv")
 
 ?calc_depth
 # Example:
@@ -190,6 +196,7 @@ range(Blackwood_prelim3Q$timestamp)
 # calc_depth(Q=u(Qs, "m^3 s^-1"), c=u(40,"cm"))
 # calc_depth(Q=u(Qs, "m^3 s^-1"), f=u(0.36))
 
+## ---------------------------
 # Flow data from USGS:
 library(dataRetrieval)
   # Blackwood canyon "10336660"
@@ -199,43 +206,60 @@ parameterCd <- c("00060", "00010")
   #Raw daily data:
 Q_BlackW <- readNWISdv(siteNumber,parameterCd,
                        "2020-09-27","2020-10-29")
-plot(Q_BlackW$Date, Q_BlackW$X_00060_00003)
 
-Qs <- c(Q_BlackW$X_00060_00003 * 0.0283168)
-calc_depth(Q=Qs)
-calc_depth(Q=Qs, f=0.4)
-library(unitted)
-calc_depth(Q=u(Qs, "m^3 s^-1"), c=u(40,"cm"))
-calc_depth(Q=u(Qs, "m^3 s^-1"), f=u(0.36))
-
-
+# Left join flow data with DO dat
+Blackwood_prelim3Q$date <- as.Date(Blackwood_prelim3Q$timestamp)
+Blackwood_MSM <- left_join(Blackwood_prelim3Q, Q_BlackW[c("Date", "X_00060_00003")],
+                           by = c("date" = "Date"))
+summary(Blackwood_MSM)
 Blackwood_prelim3Q
 
-?calc_DO_sat
-# Example
-calc_DO_sat(temp=21, press=1000.1, sal=0) # no units checking if no units provided
-library(unitted)
-calc_DO_sat(temp=u(21,"degC"), press=u(1000.1,"mb"), sal=u(0,"PSU")) # units are checked
+plot(Q_BlackW$Date, Q_BlackW$X_00060_00003) # some gaps 
+Blackwood_MSM$Qs <- c(replace_na(Blackwood_MSM$X_00060_00003, 
+                            (mean(na.omit(Blackwood_MSM$X_00060_00003))))) #Infilling NA flow obs with mean "1.282"
 
+Blackwood_MSM$depth <- calc_depth(Q=u(Qs, "m^3 s^-1"), f=u(0.36))
+?calc_depth
+# calc light example
+latitude <- c(39.107055)
+longitude <- c(-120.163089) 
 
+Blackwood_MSM$solar.time <- calc_solar_time(Blackwood_MSM$timestamp, longitude)
+Blackwood_MSM$light <- calc_light(
+  solar.time,
+  latitude,
+  longitude,
+  max.PAR = u(2326, "umol m^-2 s^-1"),
+  attach.units = is.unitted(solar.time)
+)
 
-?calc_light
-?convert_date_to_doyhr
-#?convert_localtime_to_UTC
-?convert_UTC_to_solartime
-?convert_k600_to_kGAS
-?convert_PAR_to_SW
+Blackwood_MSM$DO_sat <- calc_DO_sat(Blackwood_MSM$Temperature, 
+                                    press=1000.1, sal=0) # still need to get barometric pressure data
 
+# Check the input data format:
+?mm_data
+metab_inputs('mle', 'data')
 
+###
+# Get data in correct name and column form
+names(Blackwood_MSM)
 
+colnames(Blackwood_MSM)[5] <- "temp.water"
+colnames(Blackwood_MSM)[6] <- "DO.obs"
+colnames(Blackwood_MSM)[7] <- "DO.sat"
+colnames(Blackwood_MSM)[14] <- "discharge"
 
-# need light dat + depth dat
-Blackwood_prelim3Q
-#Rename values to better fit within df
-names(WardSNOTEL_ex)[2] <- "PrecipAccum.aveR" 
-names(Blackwood_prelim3Q)[6] <- 
+# New named df
+BWdat <- subset(Blackwood_MSM, select= c(solar.time, DO.obs, DO.sat, depth, temp.water, light, discharge))
 
-dat %>% unitted::v() %>%
+# write.csv(BWdat, paste0(outputDir, "/BWdat.csv")) # complied data file 
+
+## ---------------------------
+# Incase we need to re-read in clean data 
+# BWdat <- read.csv("BWdat.csv")
+
+# GPP visualization + modeling
+BWdat %>% unitted::v() %>%
   mutate(DO.pctsat = 100 * (DO.obs / DO.sat)) %>%
   select(solar.time, starts_with('DO')) %>%
   gather(type, DO.value, starts_with('DO')) %>%
@@ -245,7 +269,7 @@ dat %>% unitted::v() %>%
   scale_color_discrete('variable')
 
 labels <- c(depth='depth\n(m)', temp.water='water temp\n(deg C)', light='PAR\n(umol m^-2 s^-1)')
-dat %>% unitted::v() %>%
+BWdat %>% unitted::v() %>%
   select(solar.time, depth, temp.water, light) %>%
   gather(type, value, depth, temp.water, light) %>%
   mutate(
@@ -255,6 +279,126 @@ dat %>% unitted::v() %>%
   facet_grid(units ~ ., scale='free_y') + theme_bw() +
   scale_color_discrete('variable')
 
-# Check the input data format:
-metab_inputs('mle', 'data')
+?data_metab
+
+## ---------------------------
+# with chaining & customization
+library(dplyr)
+library(dygraphs)
+
+# lets cutout the 26th 
+BWdat1 <- subset(BWdat, solar.time <= as.POSIXct('2020-10-28 10:59:40 UTC'))
+
+# fit a basic MLE model
+?metab
+mm <- metab(specs(mm_name('mle')), data=BWdat1, info='my info')
+predict_metab(mm)
+get_info(mm)
+get_fitting_time(mm)
+
+mm <- mm_name('mle', ode_method='euler') %>%
+  specs(init.GPP.daily=40) %>%
+  metab(data=BWdat1)
+predict_metab(mm)
+## Not run: 
+plot_DO_preds(predict_DO(mm))
+plot_DO_preds(predict_DO(mm), y_var='pctsat', style='dygraphs')
+
+plot_metab_preds(mm)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################3
+# you are here ##
+# For this example, we will specify a Bayesian model with both observation error and process error. 
+# We won’t pool K600 here because we don’t have many days of data, but pooling is one feature that makes Bayesian models better than MLE models in general. 
+# Another great feature of Bayesian models is that they produce more accurate and nuanced confidence intervals.
+bayes_name <- mm_name(type='bayes', pool_K600='none', err_obs_iid=TRUE, err_proc_iid=TRUE)
+bayes_name
+
+# Set the specifications:
+
+# We now pass the model name to specs() to get a list of default specifications for this model.
+bayes_specs <- specs(bayes_name)
+bayes_specs
+#At this point we can alter some of the specifications if desired...
+
+# one way to alter specifications: call specs() again
+bayes_specs <- specs(bayes_name, burnin_steps=100, saved_steps=200, n_cores=1, GPP_daily_mu=3, GPP_daily_sigma=2)
+# another way: use revise()
+bayes_specs <- revise(bayes_specs, burnin_steps=100, saved_steps=200, n_cores=1, GPP_daily_mu=3, GPP_daily_sigma=2)
+
+# Fitting the model:
+#   Once a model has been configured, you can fit the model to data with metab(). 
+#   Bayesian models take a while to run, so be patient. Or switch to an MLE model if you can afford to sacrifice some accuracy for speed. 
+#   (This small example usually takes about 30 seconds on my computer.)
+
+mm <- metab(bayes_specs, data=BWdat) 
+
+
+# Here are the daily metabolism predictions from the model:
+predict_metab(mm)
+
+plot_metab_preds(mm)
+
+# You can inspect more of the fitted daily parameters, including K600, with get_params():
+get_params(mm)
+
+# Here are the first few dissolved oxygen predictions from the model (DO.mod). 
+# They are returned along with the input data for convenience.
+
+predict_DO(mm) %>% head()
+plot_DO_preds(mm)
+
+# For Bayesian models only, you can dig even deeper using get_mcmc, which returns a stanfit object that 
+# can be inspected using the rstan package. 
+# (These traceplots are pretty bad because we used so few MCMC iterations. 
+# You should strive for better in your final models.)
+
+mcmc <- get_mcmc(mm)
+rstan::traceplot(mcmc, pars='K600_daily', nrow=3)
+
+# The get_fit() function returns a list of data.frames, 
+# one per temporal resolution, containing all fitted values and details about their distributions and convergence. 
+# Here are just the overall metrics of model convergence (Rhats, or potential scale reduction statistics; see Gelman and Rubin 1992 or Brooks and Gelman 1998):
+
+get_fit(mm)$overall %>%
+  select(ends_with('Rhat'))
+
+# And here is a list of all column names available through get_fit():
+get_fit(mm) %>%
+  lapply(names)
+
+
+
 
