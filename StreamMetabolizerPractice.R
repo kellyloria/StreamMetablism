@@ -207,34 +207,40 @@ parameterCd <- c("00060", "00010")
 Q_BlackW <- readNWISdv(siteNumber,parameterCd,
                        "2020-09-27","2020-10-29")
 
-# Left join flow data with DO dat
-Blackwood_prelim3Q$date <- as.Date(Blackwood_prelim3Q$timestamp)
-Blackwood_MSM <- left_join(Blackwood_prelim3Q, Q_BlackW[c("Date", "X_00060_00003")],
-                           by = c("date" = "Date"))
-summary(Blackwood_MSM)
-Blackwood_prelim3Q
+# Q_BlackW$Qs <- rollapply(Q_BlackW$X_00060_00003, width=3, 
+#                            FUN=function(x) mean(x, na.rm=TRUE), by=1, 
+#                            by.column=TRUE, partial=TRUE, fill=NA, align="center")
+
+# Q_BlackW$Qs <- replace(Q_BlackW$flow, Q_BlackW$flow==0,0.001)
 
 plot(Q_BlackW$Date, Q_BlackW$X_00060_00003) # some gaps 
-Blackwood_MSM$Qs <- c(replace_na(Blackwood_MSM$X_00060_00003, 
-                            (mean(na.omit(Blackwood_MSM$X_00060_00003))))) #Infilling NA flow obs with mean "1.282"
 
-Blackwood_MSM$depth <- calc_depth(Q=u(Qs, "m^3 s^-1"), f=u(0.36))
-?calc_depth
+# Left join flow data with DO dat
+Q_BlackW1 <- left_join(Q_BlackW, qwData_wardQ[c("Date", "baroRawMiliBar")],
+                         by = c("Date" = "Date"))
+
+Blackwood_prelim3Q$date <- as.Date(Blackwood_prelim3Q$timestamp)
+Blackwood_MSM <- left_join(Blackwood_prelim3Q, Q_BlackW1[c("Date", "X_00060_00003", "baroRawMiliBar")],
+                           by = c("date" = "Date"))
+summary(Blackwood_MSM)
+
+Blackwood_MSM$depth <- calc_depth(Q=u(Blackwood_MSM$X_00060_00003, "m^3 s^-1"), f=u(0.36))
+#?calc_depth
 # calc light example
 latitude <- c(39.107055)
 longitude <- c(-120.163089) 
 
 Blackwood_MSM$solar.time <- calc_solar_time(Blackwood_MSM$timestamp, longitude)
-Blackwood_MSM$light <- calc_light(
-  solar.time,
-  latitude,
-  longitude,
-  max.PAR = u(2326, "umol m^-2 s^-1"),
-  attach.units = is.unitted(solar.time)
+Blackwood_MSM$light <- calc_light(Blackwood_MSM$solar.time,
+                                  latitude,
+                                  longitude,
+                                  max.PAR = u(2326, "umol m^-2 s^-1"),
+                                  attach.units = is.unitted(Blackwood_MSM$solar.time)
 )
 
+#?calc_light
 Blackwood_MSM$DO_sat <- calc_DO_sat(Blackwood_MSM$Temperature, 
-                                    press=1000.1, sal=0) # still need to get barometric pressure data
+                                    Blackwood_MSM$baroRawMiliBar, sal=0) # still need to get barometric pressure data
 
 # Check the input data format:
 ?mm_data
@@ -246,8 +252,8 @@ names(Blackwood_MSM)
 
 colnames(Blackwood_MSM)[5] <- "temp.water"
 colnames(Blackwood_MSM)[6] <- "DO.obs"
-colnames(Blackwood_MSM)[7] <- "DO.sat"
-colnames(Blackwood_MSM)[14] <- "discharge"
+colnames(Blackwood_MSM)[13] <- "discharge"
+colnames(Blackwood_MSM)[18] <- "DO.sat"
 
 # New named df
 BWdat <- subset(Blackwood_MSM, select= c(solar.time, DO.obs, DO.sat, depth, temp.water, light, discharge))
@@ -287,26 +293,57 @@ library(dplyr)
 library(dygraphs)
 
 # lets cutout the 26th 
-BWdat1 <- subset(BWdat, solar.time <= as.POSIXct('2020-10-28 10:59:40 UTC'))
+#BWdat1 <- subset(BWdat, solar.time <= as.POSIXct('2020-10-28 10:59:40 UTC'))
 
 # fit a basic MLE model
 ?metab
-mm <- metab(specs(mm_name('mle')), data=BWdat1, info='my info')
+mm <- metab(specs(mm_name('mle')), data=BWdat, info='my info')
 predict_metab(mm)
 get_info(mm)
 get_fitting_time(mm)
 
-mm <- mm_name('mle', ode_method='euler') %>%
-  specs(init.GPP.daily=40) %>%
-  metab(data=BWdat1)
-predict_metab(mm)
+# mm <- mm_name('mle', ode_method='euler') %>%
+#   specs(init.GPP.daily=40) %>%
+#   metab(data=BWdat1)
+# predict_metab(mm)
 ## Not run: 
-plot_DO_preds(predict_DO(mm))
-plot_DO_preds(predict_DO(mm), y_var='pctsat', style='dygraphs')
 
-plot_metab_preds(mm)
+# Panel plot for raw data
+BW_RawPlot1 <- BWdat %>% unitted::v() %>%
+  mutate(DO.pctsat = 100 * (DO.obs / DO.sat)) %>%
+  select(solar.time, starts_with('DO')) %>%
+  gather(type, DO.value, starts_with('DO')) %>%
+  mutate(units=ifelse(type == 'DO.pctsat', 'DO\n(% sat)', 'DO\n(mg/L)')) %>%
+  ggplot(aes(x=solar.time, y=DO.value, color=type)) + geom_line() +
+  facet_grid(units ~ ., scale='free_y') + theme_bw() + xlab("") + ggtitle("Blackwood Creek") +
+  ylab("") +
+  scale_color_manual(values = c("#B9C252", "#0B322F", "#1f838c")) 
 
+labels <- c(depth='depth\n(m)', temp.water='water temp\n(deg C)', light='PAR\n(umol m^-2 s^-1)')
+BW_RawPlot2 <- BWdat %>% unitted::v() %>%
+  select(solar.time, depth, temp.water, light) %>%
+  gather(type, value, depth, temp.water, light) %>%
+  mutate(
+    type=ordered(type, levels=c('depth','temp.water','light')),
+    units=ordered(labels[type], unname(labels))) %>%
+  ggplot(aes(x=solar.time, y=value, color=type)) + geom_line() +
+  facet_grid(units ~ ., scale='free_y') + theme_bw() + xlab("Solar time") +
+  ylab("") +
+  scale_color_manual(values = c("#C1666B", "#3c709e", "#D4B483")) 
 
+#library(gridExtra)
+RawDat <- grid.arrange(BW_RawPlot1, BW_RawPlot2,
+                       nrow = 2, heights=c(1.5,2))
+#ggsave(paste0(outputDir,"/MSM_BlackwoodRawModelData.pdf"), RawDat, scale = 1, width =15, height = 20, units = c("cm"), dpi = 500)
+
+# Panel plot for Modeled data
+BW_ModelDOPlot <- plot_DO_preds(predict_DO(mm))
+#?plot_DO_preds
+BW_ModelMetabPlot <- plot_metab_preds(mm)
+
+ModelDat <- grid.arrange(BW_ModelDOPlot, BW_ModelMetabPlot,
+                         nrow = 2, heights=c(2,1.5))
+#ggsave(paste0(outputDir,"/MSM_BlackwoodMetabModelData.pdf"), ModelDat, scale = 1, width =15, height = 20, units = c("cm"), dpi = 500)
 
 
 
